@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Whispers in the Fog - Horror Game</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="styles/style.css">
+  <style>
+    /* Basic horror-themed full screen */
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      width: 100%;
+      height: 100%;
+      background: black url('assets/title_bg.jpg') center center no-repeat;
+      background-size: cover;
+      font-family: 'Arial', sans-serif;
+    }
+
+    #start-screen {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100%;
+      color: white;
+      text-shadow: 2px 2px 8px red;
+      background-color: rgba(0, 0, 0, 0.5);
+    }
+
+    h1 {
+      font-size: 4em;
+      margin-bottom: 40px;
+    }
+
+    button {
+      padding: 20px 40px;
+      font-size: 1.5em;
+      background: crimson;
+      border: none;
+      border-radius: 10px;
+      color: white;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    button:hover {
+      background: darkred;
+    }
+  </style>
+</head>
+<body>
+  <div id="start-screen">
+    <h1>Whispers in the Fog</h1>
+    <button id="start-btn">Start Game</button>
+  </div>
+
+  <!-- Audio -->
+  <audio id="bgm" src="assets/BeginPageBGM.mp3" loop autoplay></audio>
+  <audio id="click-sfx" src="assets/MenuSelectionClick.wav"></audio>
+
+  <script type="module">
+    const bgm = document.getElementById("bgm");
+    const clickSFX = document.getElementById("click-sfx");
+    const startBtn = document.getElementById("start-btn");
+
+    // Ensure BGM plays on interaction if autoplay is blocked
+    window.addEventListener('click', () => {
+      bgm.play().catch(() => {});
+    });
+
+    startBtn.addEventListener("click", () => {
+      clickSFX.play();
+      // Wait for sound then start game
+      setTimeout(() => {
+        window.location.href = "game.html"; // This will be your main game page
+      }, 500);
+    });
+  </script>
+</body>
+</html>
