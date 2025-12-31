@@ -26,6 +26,17 @@
       text-align: center;
     }
     #tagline { margin: 0 0 18px; opacity: 0.9; line-height: 1.5; }
+    #menuBtn {
+    border: 1px solid rgba(255,255,255,0.22);
+    background: rgba(255,255,255,0.08);
+    color: #fff;
+    padding: 10px 14px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 14px;
+    margin-left: 10px;
+  }
+    #menuBtn:hover { background: rgba(255,255,255,0.14); }
     #startBtn {
       border: 1px solid rgba(255,255,255,0.25);
       background: rgba(255,255,255,0.06);
@@ -104,6 +115,42 @@
     }
     #crosshair:before { left: 4px; top: 0; width: 2px; height: 10px; }
     #crosshair:after  { left: 0; top: 4px; width: 10px; height: 2px; }
+    
+        /* ---------- Jumpscare ---------- */
+    #jumpscare{
+      position: fixed; inset: 0;
+      z-index: 999;
+      display: none;
+      background: radial-gradient(circle at 50% 40%, rgba(255,255,255,0.18), rgba(0,0,0,0.92) 65%);
+      animation: none;
+    }
+    #jumpscare::before{
+      content:"";
+      position:absolute; inset:-10%;
+      background:
+        radial-gradient(circle at 42% 42%, rgba(255,255,255,0.92) 0 6%, rgba(0,0,0,0.95) 7% 13%, transparent 14%),
+        radial-gradient(circle at 58% 42%, rgba(255,255,255,0.92) 0 6%, rgba(0,0,0,0.95) 7% 13%, transparent 14%),
+        radial-gradient(ellipse at 50% 60%, rgba(255,255,255,0.18) 0 10%, rgba(0,0,0,0.0) 11%),
+        radial-gradient(circle at 50% 50%, rgba(40,120,40,0.55), rgba(0,0,0,0) 62%);
+      filter: blur(0.6px) contrast(1.35) saturate(1.2);
+      transform: scale(1.15);
+    }
+    @keyframes scarePop {
+      0%   { transform: scale(0.92); filter: blur(0px); opacity: 0; }
+      8%   { opacity: 1; }
+      20%  { transform: scale(1.12); }
+      35%  { transform: scale(1.22); }
+      55%  { transform: scale(1.18); }
+      100% { transform: scale(1.26); opacity: 1; }
+    }
+    @keyframes scareShake {
+      0% { transform: translate(0,0); }
+      20%{ transform: translate(-8px, 3px); }
+      40%{ transform: translate(7px, -4px); }
+      60%{ transform: translate(-6px, -2px); }
+      80%{ transform: translate(6px, 4px); }
+      100%{ transform: translate(0,0); }
+    }
 
     /* ---------- Death Screen ---------- */
     #deathScreen {
@@ -196,12 +243,13 @@
   <!-- Death Screen -->
   <div id="deathScreen">
     <div id="deathBox">
-      <h2>你听见了它的心跳</h2>
+      <h2 id="endTitle">你听见了它的心跳</h2>
       <p id="deathReason">雾散了一瞬，沼泽把你吞没。</p>
       <button id="retryBtn">重新开始</button>
+      <button id="menuBtn">回到菜单</button>
     </div>
   </div>
-
+  <div id="jumpscare" aria-hidden="true"></div>
   <script type="module">
     window.__MODULE_OK__ = true;
 
@@ -246,6 +294,9 @@
     const deathScreen = document.getElementById("deathScreen");
     const deathReason = document.getElementById("deathReason");
     const retryBtn = document.getElementById("retryBtn");
+    const endTitle = document.getElementById("endTitle");
+    const jumpscare = document.getElementById("jumpscare");
+    const menuBtn = document.getElementById("menuBtn");
     window.__MODULE_OK__ = false;
     window.addEventListener("DOMContentLoaded", () => {
       setTimeout(() => {
@@ -272,6 +323,8 @@
       gameBgm: new Audio(ASSETS.gameBgm),
       deathBgm: new Audio(ASSETS.deathBgm),
       lightClick: new Audio(ASSETS.lightClick),
+      // ✅ 新增：胜利音效
+      completeTask: new Audio("./assets/completetask.mp3"),
     };
     for (const [k, a] of Object.entries(audio)) {
   a.addEventListener("canplaythrough", () => console.log("[AUDIO OK]", k, a.src));
@@ -279,6 +332,8 @@
 }
     audio.beginBgm.loop = true;
     audio.gameBgm.loop = true;
+    audio.completeTask.preload = "auto";
+    audio.completeTask.loop = false;
     audio.menuClick.preload = "auto";
     audio.lightClick.preload = "auto";
     audio.deathBgm.preload = "auto";
@@ -450,6 +505,10 @@
     --------------------------- */
     function initThree() {
       renderer = new THREE.WebGLRenderer({ antialias: true });
+      // --- Brightness / tone mapping ---
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.6;   // 1.15~1.6 之间可以自己调
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
       renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
       renderer.setSize(window.innerWidth, window.innerHeight);
       renderer.shadowMap.enabled = true;
@@ -464,17 +523,22 @@
       camera.position.copy(player.pos);
 
       // Lighting: dim ambient + cold moon + player flashlight
-      const ambient = new THREE.AmbientLight(0x9aa0aa, 0.15);
+      // Lighting: brighter ambient + cold moon + soft hemisphere + player flashlight
+      const ambient = new THREE.AmbientLight(0x9aa0aa, 0.32); // 原来 0.15
       scene.add(ambient);
       world.ambient = ambient;
 
-      const moon = new THREE.DirectionalLight(0xcad6ff, 0.25);
+      const hemi = new THREE.HemisphereLight(0xbfd0ff, 0x0b0d10, 0.22);
+      scene.add(hemi);
+
+      const moon = new THREE.DirectionalLight(0xcad6ff, 0.55); // 原来 0.25
       moon.position.set(-18, 26, -10);
       moon.castShadow = false;
       scene.add(moon);
       world.moon = moon;
 
-      const flashlight = new THREE.SpotLight(0xffffff, 1.8, 18, Math.PI / 7, 0.25, 1.0);
+
+      const flashlight = new THREE.SpotLight(0xffffff, 4.2, 26, Math.PI / 6, 0.35, 1.0);
       flashlight.visible = false;
       flashlight.castShadow = true;
       flashlight.shadow.mapSize.width = 1024;
@@ -482,6 +546,8 @@
       scene.add(flashlight);
       scene.add(flashlight.target);
       world.flashlight = flashlight;
+      flashlight.decay = 1.6;
+      flashlight.distance = 26;
 
       // Swamp ground (dark plane + subtle height noise via vertices)
       const size = 120;
@@ -659,18 +725,59 @@
       animate();
     }
 
-    function showDeath(reasonText) {
+    function playJumpscare() {
+      if (!jumpscare) return;
+
+      // 视觉
+      jumpscare.style.display = "block";
+      jumpscare.style.animation = "scareShake 0.25s linear 0s 2";
+      jumpscare.style.opacity = "1";
+      jumpscare.style.transform = "scale(1)";
+      jumpscare.style.backgroundColor = "rgba(255,255,255,0.08)";
+      jumpscare.style.backdropFilter = "blur(0px)";
+      jumpscare.style.webkitBackdropFilter = "blur(0px)";
+      jumpscare.style.willChange = "transform, opacity";
+
+      // 让 ::before 做“扑脸”
+      jumpscare.style.setProperty("animation-name", "scareShake");
+      jumpscare.animate(
+        [{ transform: "scale(0.92)", opacity: 0 }, { transform: "scale(1.26)", opacity: 1 }],
+        { duration: 520, easing: "cubic-bezier(.1,.9,.2,1)", fill: "forwards" }
+      );
+
+      // 声音：用你已有的 menuClick 做“突刺”（避免再加新资源）
+      safePlay(audio.menuClick, 1.0);
+
+      // 0.6 秒后隐藏
+      setTimeout(() => {
+        jumpscare.style.display = "none";
+      }, 650);
+    }
+
+    function showDeath(reasonText, opts = {}) {
+      const { jumpscare: doScare = true, title = "你听见了它的心跳" } = opts;
+
       running = false;
       try { document.exitPointerLock?.(); } catch {}
       crosshair.style.display = "none";
       centerHint.style.display = "none";
 
       safeStop(audio.gameBgm);
-      safePlay(audio.deathBgm, 0.7);
+
+      if (opts.music !== "none") {
+        safeStop(audio.deathBgm);
+        safePlay(audio.deathBgm, 0.7);
+      }
       setWhisperLevel(0.0);
 
+      if (endTitle) endTitle.textContent = title;
       deathReason.textContent = reasonText || "雾散了一瞬，沼泽把你吞没。";
-      deathScreen.style.display = "grid";
+
+      if (doScare) playJumpscare();
+
+      setTimeout(() => {
+        deathScreen.style.display = "grid";
+      }, doScare ? 520 : 0);
     }
 
     /* ---------------------------
@@ -723,7 +830,18 @@
 
         setTimeout(() => {
           if (!running) return;
-          showDeath("你把三枚符印合在一起。低语突然停止——沼泽退后了一步。你走出了雾。");
+          // 胜利：停止所有威胁音频，播放完成音效
+          safeStop(audio.gameBgm);
+          safeStop(audio.deathBgm);
+          safeStop(audio.menuClick);
+
+          safePlay(audio.completeTask, 0.9);
+
+          showDeath(
+            "你把三枚符印合在一起。低语突然停止——沼泽退后了一步。你走出了雾。",
+            { jumpscare: false, title: "雾散了，你赢了", music: "none" }
+          );
+
         }, 1800);
       }
     }
@@ -733,17 +851,26 @@
     --------------------------- */
     function updatePlayer(dt) {
       // forward/right from yaw
-      const forward = new THREE.Vector3(Math.sin(player.yaw), 0, Math.cos(player.yaw));
-      const right = new THREE.Vector3(forward.z, 0, -forward.x);
+      const forward = new THREE.Vector3();
+      camera.getWorldDirection(forward);
+      forward.y = 0;
+      forward.normalize();
 
-      let move = new THREE.Vector3(0,0,0);
-      if (keys.has("KeyW")) move.add(forward);
-      if (keys.has("KeyS")) move.sub(forward);
-      if (keys.has("KeyA")) move.sub(right);
-      if (keys.has("KeyD")) move.add(right);
+      const right = new THREE.Vector3();
+      right.crossVectors(forward, new THREE.Vector3(0,1,0)).normalize();
 
-      const moving = move.lengthSq() > 0.0001;
-      if (moving) move.normalize();
+    let move = new THREE.Vector3(0, 0, 0);
+
+    // W/S: forward / backward
+    if (keys.has("KeyW")) move.add(forward);
+    if (keys.has("KeyS")) move.sub(forward);
+
+    // A/D: left / right
+    if (keys.has("KeyA")) move.sub(right);
+    if (keys.has("KeyD")) move.add(right);
+
+    const moving = move.lengthSq() > 0.0001;
+    if (moving) move.normalize();
 
       let spd = player.speed;
       if (keys.has("ShiftLeft") || keys.has("ShiftRight")) spd *= player.sprintMul;
@@ -940,10 +1067,36 @@
       renderer.render(scene, camera);
       requestAnimationFrame(animate);
     }
+    function backToMenu() {
+      // 停止游戏循环与交互
+      running = false;
+      try { document.exitPointerLock?.(); } catch {}
+
+      // 关 UI
+      deathScreen.style.display = "none";
+      hud.style.display = "none";
+      crosshair.style.display = "none";
+      centerHint.style.display = "none";
+      wm.style.display = "none";
+
+      // 音频：全部停掉，再回到标题 BGM
+      safeStop(audio.gameBgm);
+      safeStop(audio.deathBgm);
+      if (audio.completeTask) safeStop(audio.completeTask);
+      setWhisperLevel(0.0);
+
+      // 显示标题页
+      titleScreen.style.display = "grid";
+      safePlay(audio.beginBgm, 0.55);
+    }
 
     /* ---------------------------
       UI wiring
     --------------------------- */
+    menuBtn.addEventListener("click", () => {
+      safePlay(audio.menuClick, 0.9);
+      backToMenu();
+    });
     function beginTitleAudio() {
       // Try autoplay; most browsers require a gesture; so we also trigger on button click.
       safePlay(audio.beginBgm, 0.55);
