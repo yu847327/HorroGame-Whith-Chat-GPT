@@ -400,16 +400,18 @@
     }
     function setWhisperLevel(level01) {
       if (!whisper.running) return;
+
       const lv = Math.max(0, Math.min(1, level01));
-      // also shift filter a bit
-      whisper.filter.frequency.value = 520 + lv * 900;
-      whisper.gain.gain.setTargetAtTime(lv * 0.22, actx.currentTime, 0.05);
-    }
-    function stopWhisper() {
-      if (!whisper.running) return;
-      try { whisper.node.stop(); } catch {}
-      try { whisper.lfo.stop(); } catch {}
-      whisper.running = false;
+    
+      // 频率：远闷近清
+      whisper.filter.frequency.value = 380 + lv * 2200;
+    
+      // 音量：非线性放大
+      const vol = Math.pow(lv, 1.6) * 0.42;
+      whisper.gain.gain.setTargetAtTime(vol, actx.currentTime, 0.04);
+    
+      // 节奏：近处更急促
+      whisper.lfo.frequency.value = 0.28 + lv * 0.55;
     }
 
     function safePlay(aud, volume=1.0) {
@@ -566,8 +568,16 @@
       const mat = new THREE.MeshStandardMaterial({
         color: 0x0a0d0a,
         roughness: 1.0,
-        metalness: 0.0
+        metalness: 0.0,
+        // 关键：自发光
+        emissive: new THREE.Color(0x88ccff),
+        emissiveIntensity: 0.45
       });
+      
+      const glow = new THREE.PointLight(0x88ccff, 0.35, 2.2);
+      glow.position.set(0, 0.25, 0);
+      seal.add(glow);
+      
       const ground = new THREE.Mesh(geo, mat);
       ground.receiveShadow = true;
       scene.add(ground);
@@ -715,7 +725,7 @@
       crosshair.style.display = "block";
 
       safeStop(audio.beginBgm);
-      safePlay(audio.gameBgm, 0.55);
+      safePlay(audio.gameBgm, 0.32);
 
       startWhisper();
       setWhisperLevel(0.05);
