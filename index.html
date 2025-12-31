@@ -1,0 +1,1011 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    html, body { height: 100%; margin: 0; background: #000; overflow: hidden; font-family: system-ui, -apple-system, Segoe UI, Roboto, "PingFang SC", "Microsoft YaHei", sans-serif; }
+    canvas { display: block; }
+
+    /* ---------- Title Screen ---------- */
+    #titleScreen {
+      position: fixed; inset: 0;
+      background: #000 url("./assets/title_bg.jpg") center/cover no-repeat;
+      display: grid;
+      place-items: center;
+      z-index: 10;
+    }
+    #titleOverlay {
+      width: min(880px, calc(100vw - 48px));
+      border-radius: 16px;
+      padding: 28px 28px 22px;
+      background: rgba(0,0,0,0.58);
+      backdrop-filter: blur(6px);
+      box-shadow: 0 18px 60px rgba(0,0,0,0.6);
+      color: #eaeaea;
+      text-align: center;
+    }
+    #tagline { margin: 0 0 18px; opacity: 0.9; line-height: 1.5; }
+    #startBtn {
+      border: 1px solid rgba(255,255,255,0.25);
+      background: rgba(255,255,255,0.06);
+      color: #fff;
+      padding: 12px 18px;
+      border-radius: 12px;
+      font-size: 16px;
+      cursor: pointer;
+      display: block;
+      margin: 12px auto 0;
+    }
+    #startBtn:hover { background: rgba(255,255,255,0.12); }
+    #controlsHint {
+      margin-top: 14px;
+      font-size: 13px;
+      opacity: 0.85;
+      line-height: 1.65;
+    }
+
+    /* ---------- HUD ---------- */
+    #hud {
+      position: fixed;
+      left: 12px; top: 12px;
+      z-index: 5;
+      color: #eaeaea;
+      user-select: none;
+      display: none;
+      gap: 10px;
+      align-items: flex-start;
+    }
+    .panel {
+      background: rgba(0,0,0,0.45);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 12px;
+      padding: 10px 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+      min-width: 210px;
+    }
+    .row { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; opacity: 0.95; }
+    .bar {
+      margin-top: 8px;
+      height: 10px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.12);
+    }
+    .bar > i { display: block; height: 100%; width: 100%; background: rgba(255,255,255,0.65); }
+    #centerHint {
+      position: fixed;
+      left: 50%; top: 50%;
+      transform: translate(-50%, calc(-50% + 38px));
+      z-index: 6;
+      color: rgba(255,255,255,0.92);
+      font-size: 14px;
+      background: rgba(0,0,0,0.42);
+      border: 1px solid rgba(255,255,255,0.12);
+      padding: 8px 10px;
+      border-radius: 10px;
+      display: none;
+      user-select: none;
+    }
+    #crosshair {
+      position: fixed;
+      left: 50%; top: 50%;
+      transform: translate(-50%, -50%);
+      width: 10px; height: 10px;
+      z-index: 6;
+      display: none;
+      opacity: 0.85;
+    }
+    #crosshair:before, #crosshair:after {
+      content: "";
+      position: absolute;
+      background: rgba(255,255,255,0.8);
+    }
+    #crosshair:before { left: 4px; top: 0; width: 2px; height: 10px; }
+    #crosshair:after  { left: 0; top: 4px; width: 10px; height: 2px; }
+
+    /* ---------- Death Screen ---------- */
+    #deathScreen {
+      position: fixed; inset: 0;
+      display: none;
+      place-items: center;
+      z-index: 20;
+      background: radial-gradient(circle at center, rgba(0,0,0,0.35), rgba(0,0,0,0.85));
+      color: #fff;
+    }
+    #deathBox {
+      width: min(720px, calc(100vw - 48px));
+      border-radius: 16px;
+      padding: 22px 22px 18px;
+      background: rgba(0,0,0,0.55);
+      border: 1px solid rgba(255,255,255,0.12);
+      box-shadow: 0 18px 60px rgba(0,0,0,0.6);
+    }
+    #deathBox h2 { margin: 0 0 10px; letter-spacing: 1px; }
+    #deathBox p { margin: 0 0 14px; opacity: 0.9; line-height: 1.6; }
+    #retryBtn {
+      border: 1px solid rgba(255,255,255,0.22);
+      background: rgba(255,255,255,0.08);
+      color: #fff;
+      padding: 10px 14px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    #retryBtn:hover { background: rgba(255,255,255,0.14); }
+
+    /* small corner watermark */
+    #wm {
+      position: fixed; right: 10px; bottom: 10px;
+      z-index: 6; color: rgba(255,255,255,0.55);
+      font-size: 12px; display: none;
+      user-select: none;
+    }
+    #bootError {
+    position: fixed; left: 12px; right: 12px; bottom: 12px;
+    background: rgba(120,0,0,0.85);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.25);
+    padding: 10px 12px;
+    border-radius: 12px;
+    z-index: 9999;
+    font-size: 13px;
+    line-height: 1.6;
+    display: none;
+    white-space: pre-wrap;
+  }
+  </style>
+  <link rel="icon" href="data:,">
+  <link rel="preload" as="image" href="./assets/title_bg.jpg">
+  <link rel="preload" as="audio" href="./assets/BeginPageBGM.mp3">
+  <link rel="preload" as="audio" href="./assets/MenuSelectionClick.wav">
+  <link rel="preload" as="audio" href="./assets/GamingBGM.mp3">
+  <link rel="preload" as="audio" href="./assets/DeathBGM.ogg">
+  <link rel="preload" as="audio" href="./assets/LightSwitchClickOn.wav">
+</head>
+<body>
+  <!-- Title Screen -->
+  <div id="titleScreen">
+    <div id="titleOverlay">
+      <p id="tagline">
+        你被困在一片永不干涸的沼泽。雾里传来“青蛙”的低语：每一次呼吸都会被记录，每一次照明都会被追踪。<br/>
+        找到散落在木桩上的三枚“符印”，在理智耗尽之前离开。不要直视水面太久——它会回望你。
+      </p>
+      <button id="startBtn">开始游戏</button>
+      <div id="controlsHint">
+        操作：WASD 移动 / Shift 冲刺 / 鼠标转向 / F 手电开关 / E 交互拾取 / Esc 释放鼠标<br/>
+        提示：手电越亮，低语越清晰；低语越清晰，“它”越接近。
+      </div>
+    </div>
+  </div>
+
+  <!-- HUD -->
+  <div id="hud">
+    <div class="panel">
+      <div class="row"><span>理智</span><span id="sanityTxt">100</span></div>
+      <div class="bar"><i id="sanityBar"></i></div>
+      <div class="row" style="margin-top:10px;"><span>符印</span><span id="sigilTxt">0 / 3</span></div>
+      <div class="row"><span>手电</span><span id="flashTxt">关闭</span></div>
+    </div>
+  </div>
+  <div id="centerHint">按 E 拾取符印</div>
+  <div id="crosshair"></div>
+  <div id="wm">WHISPERS IN THE FROG</div>
+
+  <!-- Death Screen -->
+  <div id="deathScreen">
+    <div id="deathBox">
+      <h2>你听见了它的心跳</h2>
+      <p id="deathReason">雾散了一瞬，沼泽把你吞没。</p>
+      <button id="retryBtn">重新开始</button>
+    </div>
+  </div>
+
+  <script type="module">
+    window.__MODULE_OK__ = true;
+
+    let THREE;
+    try {
+      THREE = await import("./scripts/three.module.js");
+    }
+      catch (e) {
+      const box = document.getElementById("bootError");
+      if (box) {
+        box.style.display = "block";
+        box.textContent = "three.module.js 加载失败：\n" + (e?.stack || e);
+      }
+      throw e;
+    }
+
+
+    /* ---------------------------
+      Asset paths (match your folder tree)
+    --------------------------- */
+    const ASSETS = {
+      beginBgm: "./assets/BeginPageBGM.mp3",
+      menuClick: "./assets/MenuSelectionClick.wav",
+      gameBgm: "./assets/GamingBGM.mp3",
+      deathBgm: "./assets/DeathBGM.ogg",
+      lightClick: "./assets/LightSwitchClickOn.wav",
+    };
+
+    /* ---------------------------
+      DOM
+    --------------------------- */
+    const titleScreen = document.getElementById("titleScreen");
+    const startBtn = document.getElementById("startBtn");
+    const hud = document.getElementById("hud");
+    const sanityTxt = document.getElementById("sanityTxt");
+    const sanityBar = document.getElementById("sanityBar");
+    const sigilTxt = document.getElementById("sigilTxt");
+    const flashTxt = document.getElementById("flashTxt");
+    const centerHint = document.getElementById("centerHint");
+    const crosshair = document.getElementById("crosshair");
+    const wm = document.getElementById("wm");
+    const deathScreen = document.getElementById("deathScreen");
+    const deathReason = document.getElementById("deathReason");
+    const retryBtn = document.getElementById("retryBtn");
+    window.__MODULE_OK__ = false;
+    window.addEventListener("DOMContentLoaded", () => {
+      setTimeout(() => {
+        if (!window.__MODULE_OK__) {
+          const box = document.getElementById("bootError");
+          if (box) {
+            box.style.display = "block";
+            box.textContent =
+              "模块脚本没有成功运行（three.module.js 未加载或被浏览器拦截）。\n" +
+              "请打开 F12 -> Console 查看红色报错。\n" +
+              "同时确认：scripts/three.module.js 路径存在、并且你是通过 http://localhost:8000 打开的。";
+          } else {
+            alert("模块脚本没有成功运行，请看 Console。");
+          }
+        }
+      }, 800);
+    });
+    /* ---------------------------
+      Audio (HTMLAudio + generated whisper via WebAudio)
+    --------------------------- */
+    const audio = {
+      beginBgm: new Audio(ASSETS.beginBgm),
+      menuClick: new Audio(ASSETS.menuClick),
+      gameBgm: new Audio(ASSETS.gameBgm),
+      deathBgm: new Audio(ASSETS.deathBgm),
+      lightClick: new Audio(ASSETS.lightClick),
+    };
+    for (const [k, a] of Object.entries(audio)) {
+  a.addEventListener("canplaythrough", () => console.log("[AUDIO OK]", k, a.src));
+  a.addEventListener("error", () => console.error("[AUDIO ERR]", k, a.src, a.error));
+}
+    audio.beginBgm.loop = true;
+    audio.gameBgm.loop = true;
+    audio.menuClick.preload = "auto";
+    audio.lightClick.preload = "auto";
+    audio.deathBgm.preload = "auto";
+
+    // WebAudio "whisper" (procedural): filtered noise + slow LFO
+    let actx = null;
+    let whisper = {
+      node: null,
+      gain: null,
+      lfo: null,
+      lfoGain: null,
+      filter: null,
+      running: false,
+    };
+    function ensureAudioContext() {
+      if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+      if (actx.state === "suspended") actx.resume().catch(()=>{});
+    }
+    function startWhisper() {
+      ensureAudioContext();
+      if (whisper.running) return;
+
+      // noise buffer
+      const bufferSize = actx.sampleRate * 2;
+      const buffer = actx.createBuffer(1, bufferSize, actx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * 0.55;
+
+      const noise = actx.createBufferSource();
+      noise.buffer = buffer;
+      noise.loop = true;
+
+      const filter = actx.createBiquadFilter();
+      filter.type = "bandpass";
+      filter.frequency.value = 800;
+      filter.Q.value = 0.9;
+
+      const gain = actx.createGain();
+      gain.gain.value = 0.0;
+
+      const lfo = actx.createOscillator();
+      lfo.type = "sine";
+      lfo.frequency.value = 0.35;
+
+      const lfoGain = actx.createGain();
+      lfoGain.gain.value = 0.12;
+
+      lfo.connect(lfoGain);
+      lfoGain.connect(gain.gain);
+
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(actx.destination);
+
+      noise.start();
+      lfo.start();
+
+      whisper.node = noise;
+      whisper.gain = gain;
+      whisper.filter = filter;
+      whisper.lfo = lfo;
+      whisper.lfoGain = lfoGain;
+      whisper.running = true;
+    }
+    function setWhisperLevel(level01) {
+      if (!whisper.running) return;
+      const lv = Math.max(0, Math.min(1, level01));
+      // also shift filter a bit
+      whisper.filter.frequency.value = 520 + lv * 900;
+      whisper.gain.gain.setTargetAtTime(lv * 0.22, actx.currentTime, 0.05);
+    }
+    function stopWhisper() {
+      if (!whisper.running) return;
+      try { whisper.node.stop(); } catch {}
+      try { whisper.lfo.stop(); } catch {}
+      whisper.running = false;
+    }
+
+    function safePlay(aud, volume=1.0) {
+      aud.volume = Math.max(0, Math.min(1, volume));
+      const p = aud.play();
+      if (p && typeof p.catch === "function") p.catch(()=>{});
+    }
+    function safeStop(aud) {
+      try { aud.pause(); aud.currentTime = 0; } catch {}
+    }
+
+    /* ---------------------------
+      Three.js Setup
+    --------------------------- */
+    let renderer, scene, camera;
+    let clock = new THREE.Clock();
+
+    // Player
+    const player = {
+      pos: new THREE.Vector3(0, 1.7, 0),
+      vel: new THREE.Vector3(0, 0, 0),
+      yaw: 0,
+      pitch: 0,
+      speed: 3.2,
+      sprintMul: 1.65,
+      radius: 0.35,
+      flashlightOn: false,
+    };
+
+    // Game state
+    let running = false;
+    let pointerLocked = false;
+    let sanity = 100;
+    let sigils = 0;
+    const SIGILS_TOTAL = 3;
+    let nearSigil = null;
+
+    // Enemy ("The Frog" — a stalking silhouette)
+    const enemy = {
+      mesh: null,
+      pos: new THREE.Vector3(10, 1.2, 10),
+      speed: 1.35,
+      active: true,
+      lastSeenTimer: 0,
+    };
+
+    // World
+    const world = {
+      bounds: 34, // square half-size
+      sigilMeshes: [],
+      props: [],
+      fog: null,
+      swamp: null,
+      moon: null,
+      flashlight: null,
+      ambient: null,
+    };
+
+    /* ---------------------------
+      Input
+    --------------------------- */
+    const keys = new Set();
+    window.addEventListener("keydown", (e) => {
+      keys.add(e.code);
+      if (!running) return;
+
+      if (e.code === "KeyF") toggleFlashlight();
+      if (e.code === "KeyE") tryPickupSigil();
+    });
+    window.addEventListener("keyup", (e) => keys.delete(e.code));
+
+    window.addEventListener("mousemove", (e) => {
+      if (!pointerLocked || !running) return;
+      const mx = e.movementX || 0;
+      const my = e.movementY || 0;
+      player.yaw -= mx * 0.0022;
+      player.pitch -= my * 0.0019;
+      player.pitch = Math.max(-1.35, Math.min(1.35, player.pitch));
+    });
+
+    function lockPointer() {
+      const el = renderer?.domElement;
+      if (!el) return;
+      el.requestPointerLock?.();
+    }
+    document.addEventListener("pointerlockchange", () => {
+      pointerLocked = (document.pointerLockElement === renderer?.domElement);
+      crosshair.style.display = (pointerLocked && running) ? "block" : "none";
+    });
+
+    /* ---------------------------
+      Game bootstrap
+    --------------------------- */
+    function initThree() {
+      renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.shadowMap.enabled = true;
+      document.body.appendChild(renderer.domElement);
+
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x000000);
+      scene.fog = new THREE.FogExp2(0x060709, 0.055);
+      world.fog = scene.fog;
+
+      camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 180);
+      camera.position.copy(player.pos);
+
+      // Lighting: dim ambient + cold moon + player flashlight
+      const ambient = new THREE.AmbientLight(0x9aa0aa, 0.15);
+      scene.add(ambient);
+      world.ambient = ambient;
+
+      const moon = new THREE.DirectionalLight(0xcad6ff, 0.25);
+      moon.position.set(-18, 26, -10);
+      moon.castShadow = false;
+      scene.add(moon);
+      world.moon = moon;
+
+      const flashlight = new THREE.SpotLight(0xffffff, 1.8, 18, Math.PI / 7, 0.25, 1.0);
+      flashlight.visible = false;
+      flashlight.castShadow = true;
+      flashlight.shadow.mapSize.width = 1024;
+      flashlight.shadow.mapSize.height = 1024;
+      scene.add(flashlight);
+      scene.add(flashlight.target);
+      world.flashlight = flashlight;
+
+      // Swamp ground (dark plane + subtle height noise via vertices)
+      const size = 120;
+      const seg = 90;
+      const geo = new THREE.PlaneGeometry(size, size, seg, seg);
+      geo.rotateX(-Math.PI / 2);
+      // Make a slight undulation
+      const pos = geo.attributes.position;
+      for (let i = 0; i < pos.count; i++) {
+        const x = pos.getX(i), z = pos.getZ(i);
+        const n = (Math.sin(x*0.18) + Math.cos(z*0.15) + Math.sin((x+z)*0.1)) * 0.05;
+        pos.setY(i, n);
+      }
+      pos.needsUpdate = true;
+
+      const mat = new THREE.MeshStandardMaterial({
+        color: 0x0a0d0a,
+        roughness: 1.0,
+        metalness: 0.0
+      });
+      const ground = new THREE.Mesh(geo, mat);
+      ground.receiveShadow = true;
+      scene.add(ground);
+      world.swamp = ground;
+
+      // Props: dead trees / stakes (simple cylinders)
+      spawnProps();
+
+      // Sigils: glowing "carved" tablets on stakes
+      spawnSigils();
+
+      // Enemy mesh: a hunched silhouette (capsule-ish)
+      const eGeo = new THREE.CapsuleGeometry(0.45, 1.15, 4, 10);
+      const eMat = new THREE.MeshStandardMaterial({ color: 0x050607, roughness: 0.9, metalness: 0.0 });
+      const eMesh = new THREE.Mesh(eGeo, eMat);
+      eMesh.castShadow = true;
+      eMesh.position.copy(enemy.pos);
+      scene.add(eMesh);
+      enemy.mesh = eMesh;
+
+      // Resize
+      window.addEventListener("resize", () => {
+        if (!renderer || !camera) return;
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+      });
+
+      // Click to lock pointer in-game
+      renderer.domElement.addEventListener("click", () => {
+        if (!running) return;
+        lockPointer();
+      });
+    }
+
+    function spawnProps() {
+      const rand = (a,b)=> a + Math.random()*(b-a);
+      const stakeGeo = new THREE.CylinderGeometry(0.12, 0.22, 3.2, 8);
+      const stakeMat = new THREE.MeshStandardMaterial({ color: 0x1b1612, roughness: 1.0 });
+
+      for (let i=0;i<55;i++) {
+        const m = new THREE.Mesh(stakeGeo, stakeMat);
+        m.castShadow = true;
+        const x = rand(-world.bounds, world.bounds);
+        const z = rand(-world.bounds, world.bounds);
+        const y = 1.6;
+        m.position.set(x, y, z);
+        m.rotation.y = rand(0, Math.PI);
+        m.rotation.z = rand(-0.08, 0.08);
+        m.rotation.x = rand(-0.05, 0.05);
+        scene.add(m);
+        world.props.push(m);
+      }
+
+      // "Water mirrors": dark puddles to penalize staring
+      const puddleGeo = new THREE.CircleGeometry(2.6, 28);
+      const puddleMat = new THREE.MeshStandardMaterial({ color: 0x030405, roughness: 0.15, metalness: 0.0 });
+      for (let i=0;i<10;i++){
+        const p = new THREE.Mesh(puddleGeo, puddleMat);
+        p.receiveShadow = true;
+        p.rotation.x = -Math.PI/2;
+        p.position.set(rand(-world.bounds+6, world.bounds-6), 0.03, rand(-world.bounds+6, world.bounds-6));
+        scene.add(p);
+        world.props.push(p);
+      }
+    }
+
+    function spawnSigils() {
+      // Fixed-ish positions for pacing
+      const points = [
+        new THREE.Vector3(-18, 0, -6),
+        new THREE.Vector3(12, 0, -20),
+        new THREE.Vector3(20, 0, 16),
+      ];
+
+      const tabletGeo = new THREE.BoxGeometry(0.55, 0.75, 0.12);
+      const tabletMat = new THREE.MeshStandardMaterial({ color: 0x1c1f24, roughness: 0.55, emissive: 0x0b1420, emissiveIntensity: 0.35 });
+      const glowGeo = new THREE.SphereGeometry(0.45, 16, 16);
+      const glowMat = new THREE.MeshStandardMaterial({ color: 0x0b1626, roughness: 0.7, emissive: 0x163a66, emissiveIntensity: 0.9 });
+
+      for (let i=0;i<points.length;i++) {
+        // stake under it
+        const stake = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.12, 0.22, 2.8, 8),
+          new THREE.MeshStandardMaterial({ color: 0x1b1612, roughness: 1.0 })
+        );
+        stake.castShadow = true;
+        stake.position.set(points[i].x, 1.4, points[i].z);
+        stake.rotation.y = Math.random()*Math.PI;
+        scene.add(stake);
+
+        const tablet = new THREE.Mesh(tabletGeo, tabletMat);
+        tablet.castShadow = true;
+        tablet.position.set(points[i].x, 2.25, points[i].z);
+        tablet.rotation.y = stake.rotation.y;
+        tablet.userData.isSigil = true;
+        tablet.userData.collected = false;
+        scene.add(tablet);
+
+        const glow = new THREE.Mesh(glowGeo, glowMat);
+        glow.position.copy(tablet.position).add(new THREE.Vector3(0, 0.1, 0));
+        glow.userData.isSigilGlow = true;
+        glow.userData.parentTablet = tablet;
+        scene.add(glow);
+
+        world.sigilMeshes.push(tablet, glow);
+      }
+    }
+
+    /* ---------------------------
+      Title -> Game start
+    --------------------------- */
+    function resetGameState() {
+      sanity = 100;
+      sigils = 0;
+      nearSigil = null;
+      player.pos.set(0, 1.7, 0);
+      player.vel.set(0,0,0);
+      player.yaw = 0;
+      player.pitch = 0;
+      player.flashlightOn = false;
+
+      enemy.pos.set(10, 1.2, 10);
+      enemy.active = true;
+      enemy.lastSeenTimer = 0;
+
+      // reset sigils
+      for (const obj of world.sigilMeshes) {
+        if (obj.userData?.isSigil) obj.userData.collected = false;
+        obj.visible = true;
+      }
+
+      updateHUD();
+      centerHint.style.display = "none";
+      deathScreen.style.display = "none";
+      wm.style.display = "block";
+    }
+
+    function startGame() {
+      if (!renderer) initThree();
+      resetGameState();
+
+      titleScreen.style.display = "none";
+      hud.style.display = "flex";
+      crosshair.style.display = "block";
+
+      safeStop(audio.beginBgm);
+      safePlay(audio.gameBgm, 0.55);
+
+      startWhisper();
+      setWhisperLevel(0.05);
+
+      running = true;
+      lockPointer();
+      animate();
+    }
+
+    function showDeath(reasonText) {
+      running = false;
+      try { document.exitPointerLock?.(); } catch {}
+      crosshair.style.display = "none";
+      centerHint.style.display = "none";
+
+      safeStop(audio.gameBgm);
+      safePlay(audio.deathBgm, 0.7);
+      setWhisperLevel(0.0);
+
+      deathReason.textContent = reasonText || "雾散了一瞬，沼泽把你吞没。";
+      deathScreen.style.display = "grid";
+    }
+
+    /* ---------------------------
+      HUD helpers
+    --------------------------- */
+    function updateHUD() {
+      sanityTxt.textContent = String(Math.max(0, Math.round(sanity)));
+      sanityBar.style.width = `${Math.max(0, Math.min(100, sanity))}%`;
+      sigilTxt.textContent = `${sigils} / ${SIGILS_TOTAL}`;
+      flashTxt.textContent = player.flashlightOn ? "开启" : "关闭";
+    }
+
+    /* ---------------------------
+      Flashlight
+    --------------------------- */
+    function toggleFlashlight() {
+      player.flashlightOn = !player.flashlightOn;
+      safePlay(audio.lightClick, 0.85);
+
+      world.flashlight.visible = player.flashlightOn;
+      updateHUD();
+    }
+
+    /* ---------------------------
+      Pickup logic
+    --------------------------- */
+    function tryPickupSigil() {
+      if (!nearSigil) return;
+      if (nearSigil.userData.collected) return;
+
+      nearSigil.userData.collected = true;
+      nearSigil.visible = false;
+
+      // hide its glow companion (search)
+      for (const obj of world.sigilMeshes) {
+        if (obj.userData?.isSigilGlow && obj.userData.parentTablet === nearSigil) obj.visible = false;
+      }
+
+      sigils += 1;
+      sanity = Math.min(100, sanity + 8); // slight relief
+      updateHUD();
+      centerHint.style.display = "none";
+      nearSigil = null;
+
+      if (sigils >= SIGILS_TOTAL) {
+        // win condition: "exit" appears near origin; for simplicity, just survive 5 seconds then fade
+        // We implement a soft ending: whispers stop and fog thins.
+        world.fog.density = 0.03;
+        setWhisperLevel(0.0);
+
+        setTimeout(() => {
+          if (!running) return;
+          showDeath("你把三枚符印合在一起。低语突然停止——沼泽退后了一步。你走出了雾。");
+        }, 1800);
+      }
+    }
+
+    /* ---------------------------
+      Movement + look
+    --------------------------- */
+    function updatePlayer(dt) {
+      // forward/right from yaw
+      const forward = new THREE.Vector3(Math.sin(player.yaw), 0, Math.cos(player.yaw));
+      const right = new THREE.Vector3(forward.z, 0, -forward.x);
+
+      let move = new THREE.Vector3(0,0,0);
+      if (keys.has("KeyW")) move.add(forward);
+      if (keys.has("KeyS")) move.sub(forward);
+      if (keys.has("KeyA")) move.sub(right);
+      if (keys.has("KeyD")) move.add(right);
+
+      const moving = move.lengthSq() > 0.0001;
+      if (moving) move.normalize();
+
+      let spd = player.speed;
+      if (keys.has("ShiftLeft") || keys.has("ShiftRight")) spd *= player.sprintMul;
+
+      // soft stamina via sanity (sprinting accelerates sanity drain)
+      const sprinting = moving && (spd > player.speed + 0.01);
+
+      const step = move.multiplyScalar(spd * dt);
+      player.pos.add(step);
+
+      // clamp to bounds
+      player.pos.x = Math.max(-world.bounds, Math.min(world.bounds, player.pos.x));
+      player.pos.z = Math.max(-world.bounds, Math.min(world.bounds, player.pos.z));
+
+      // camera
+      camera.position.copy(player.pos);
+      camera.rotation.order = "YXZ";
+      camera.rotation.y = player.yaw;
+      camera.rotation.x = player.pitch;
+
+      // flashlight follows camera
+      const fl = world.flashlight;
+      if (fl) {
+        fl.position.copy(player.pos);
+        const dir = new THREE.Vector3(0,0,-1).applyEuler(camera.rotation);
+        fl.target.position.copy(player.pos).add(dir.multiplyScalar(3));
+        fl.intensity = player.flashlightOn ? 1.8 : 0.0;
+        fl.visible = player.flashlightOn;
+      }
+
+      // sanity drain baseline: fog + time
+      // key premise: flashlight & sprint make whispers stronger and sanity lower
+      let drain = 0.9;             // per minute baseline
+      drain += player.flashlightOn ? 1.2 : 0.0;
+      drain += sprinting ? 1.8 : 0.0;
+
+      // puddle gaze penalty: if looking down and near a puddle
+      const lookingDown = player.pitch < -0.55;
+      if (lookingDown && isNearPuddle(player.pos)) drain += 2.0;
+
+      // enemy proximity stress
+      const dE = enemy.pos.distanceTo(player.pos);
+      if (dE < 10) drain += (10 - dE) * 0.35;
+
+      sanity -= (drain / 60) * dt; // convert "per minute" to per second
+      sanity = Math.max(0, Math.min(100, sanity));
+    }
+
+    function isNearPuddle(pos) {
+      // puddles are in world.props as circle meshes; approximate by radius 2.6
+      for (const p of world.props) {
+        if (p.geometry && p.geometry.type === "CircleGeometry") {
+          const dx = p.position.x - pos.x;
+          const dz = p.position.z - pos.z;
+          if (dx*dx + dz*dz < (3.0*3.0)) return true;
+        }
+      }
+      return false;
+    }
+
+    /* ---------------------------
+      Sigil interaction hint
+    --------------------------- */
+    function updateSigilProximity() {
+      nearSigil = null;
+      centerHint.style.display = "none";
+
+      // pick nearest uncollected tablet within 2.2m
+      let best = null;
+      let bestD = 999;
+
+      for (const obj of world.sigilMeshes) {
+        if (!obj.userData?.isSigil) continue;
+        if (obj.userData.collected) continue;
+        const d = obj.position.distanceTo(player.pos);
+        if (d < 2.2 && d < bestD) { bestD = d; best = obj; }
+      }
+
+      if (best) {
+        nearSigil = best;
+        centerHint.style.display = "block";
+      }
+    }
+
+    /* ---------------------------
+      Enemy AI: "stalk when heard"
+      - The whisper level increases with flashlight & low sanity
+      - The enemy gets more aggressive as whisper grows
+    --------------------------- */
+    function updateEnemy(dt) {
+      if (!enemy.active) return;
+
+      // aggression driven by "whisper level"
+      const sanityFactor = 1 - (sanity / 100);
+      const lightFactor = player.flashlightOn ? 1 : 0;
+      const whisperLevel = Math.max(0, Math.min(1, 0.12 + sanityFactor*0.75 + lightFactor*0.25));
+
+      setWhisperLevel(whisperLevel);
+
+      // slow "teleport creep" when whispers are high and player isn't looking
+      enemy.lastSeenTimer += dt;
+      const toPlayer = new THREE.Vector3().subVectors(player.pos, enemy.pos);
+      const dist = toPlayer.length();
+
+      // if player flashlight is on and enemy is in front cone, delay creep (player can "hold it back")
+      let inCone = false;
+      if (player.flashlightOn && dist < 14) {
+        const camDir = new THREE.Vector3(0,0,-1).applyEuler(camera.rotation).normalize();
+        const eDir = toPlayer.clone().normalize();
+        const dot = camDir.dot(eDir);
+        inCone = dot > 0.65; // in front
+      }
+
+      // movement
+      let speed = enemy.speed * (0.75 + whisperLevel * 1.15);
+      if (inCone) speed *= 0.55;
+
+      // chase if close enough or whisper high
+      const chase = (dist < 16) || (whisperLevel > 0.55);
+
+      if (chase) {
+        toPlayer.normalize();
+        enemy.pos.add(toPlayer.multiplyScalar(speed * dt));
+      } else {
+        // wander: small drift
+        enemy.pos.x += Math.sin(perfNow()*0.00035) * 0.06 * dt;
+        enemy.pos.z += Math.cos(perfNow()*0.00032) * 0.06 * dt;
+      }
+
+      // bounds wrap for eerie re-appearance
+      enemy.pos.x = wrap(enemy.pos.x, -world.bounds, world.bounds);
+      enemy.pos.z = wrap(enemy.pos.z, -world.bounds, world.bounds);
+
+      // place mesh
+      if (enemy.mesh) {
+        enemy.mesh.position.copy(enemy.pos);
+        enemy.mesh.lookAt(player.pos.x, enemy.pos.y, player.pos.z);
+      }
+
+      // kill condition
+      if (dist < 1.25 || sanity <= 0.01) {
+        enemy.active = false;
+        const reason = (sanity <= 0.01)
+          ? "你的理智被低语磨碎。你终于听懂了那句话：‘回到水里。’"
+          : "雾里的轮廓贴近你的耳朵。那不是语言，是呼吸。";
+        showDeath(reason);
+      }
+    }
+
+    function perfNow(){ return (typeof performance !== "undefined" ? performance.now() : Date.now()); }
+    function wrap(v, min, max) {
+      const r = max - min;
+      if (v < min) return v + r;
+      if (v > max) return v - r;
+      return v;
+    }
+
+    /* ---------------------------
+      Atmosphere: subtle motion of sigil glow
+    --------------------------- */
+    function updateAtmosphere(t) {
+      for (const obj of world.sigilMeshes) {
+        if (obj.userData?.isSigilGlow) {
+          const tablet = obj.userData.parentTablet;
+          if (!tablet || tablet.userData.collected) { obj.visible = false; continue; }
+          obj.visible = true;
+          obj.position.y = tablet.position.y + 0.12 + Math.sin(t*2 + tablet.position.x*0.2) * 0.08;
+          obj.rotation.y += 0.005;
+        }
+      }
+
+      // fog breathing based on sanity
+      const s = sanity / 100;
+      world.fog.density = 0.04 + (1 - s) * 0.035;
+    }
+
+    /* ---------------------------
+      Main loop
+    --------------------------- */
+    function animate() {
+      if (!renderer || !scene || !camera) return;
+
+      const dt = Math.min(0.05, clock.getDelta());
+      const t = clock.elapsedTime;
+
+      if (running) {
+        updatePlayer(dt);
+        updateSigilProximity();
+        updateEnemy(dt);
+        updateAtmosphere(t);
+        updateHUD();
+      }
+
+      renderer.render(scene, camera);
+      requestAnimationFrame(animate);
+    }
+
+    /* ---------------------------
+      UI wiring
+    --------------------------- */
+    function beginTitleAudio() {
+      // Try autoplay; most browsers require a gesture; so we also trigger on button click.
+      safePlay(audio.beginBgm, 0.55);
+    }
+
+    startBtn.addEventListener("click", async () => {
+  console.log("[UI] start clicked");
+
+  ensureAudioContext();
+
+  // 强制解锁 WebAudio（很多浏览器需要）
+  try { await actx.resume(); } catch (e) { console.warn("actx resume failed", e); }
+
+  safePlay(audio.menuClick, 0.9);
+
+  // 不要在这里播放 beginBgm（会被你马上 stop 掉，容易导致“听不到任何音乐”的错觉）
+  setTimeout(() => {
+    try {
+      startGame();
+      console.log("[GAME] startGame ok");
+    } catch (e) {
+      console.error("[GAME] startGame error:", e);
+      alert("startGame 报错了：请打开 F12 -> Console 看错误信息");
+    }
+  }, 150);
+});
+
+
+    retryBtn.addEventListener("click", () => {
+      safeStop(audio.deathBgm);
+      safePlay(audio.menuClick, 0.9);
+      // back to title? Here we restart directly for pace
+      running = true;
+      deathScreen.style.display = "none";
+      safePlay(audio.gameBgm, 0.55);
+      startWhisper();
+      setWhisperLevel(0.08);
+      resetGameState();
+      lockPointer();
+    });
+
+    // Start title bgm once user interacts anywhere
+    window.addEventListener("pointerdown", () => {
+      ensureAudioContext();
+      if (titleScreen.style.display !== "none") beginTitleAudio();
+    }, { once: true });
+
+    // If user hits ESC and unlocks pointer, show a subtle hint via HUD
+    document.addEventListener("keyup", (e) => {
+      if (e.code === "Escape" && running) {
+        // no modal: user can click to relock
+      }
+    });
+
+    // Initial: preload some audio quietly
+    (function preload(){
+      for (const k of Object.keys(audio)) {
+        try { audio[k].load(); } catch {}
+      }
+    })();
+
+  </script>
+  <div id="bootError"></div>
+</body>
+</html>
