@@ -400,18 +400,17 @@
     }
     function setWhisperLevel(level01) {
       if (!whisper.running) return;
-
       const lv = Math.max(0, Math.min(1, level01));
     
-      // 频率：远闷近清
-      whisper.filter.frequency.value = 380 + lv * 2200;
+      // 用指数曲线拉开差距：小lv更小，大lv更大
+      const amp = Math.pow(lv, 1.6);
     
-      // 音量：非线性放大
-      const vol = Math.pow(lv, 1.6) * 0.42;
-      whisper.gain.gain.setTargetAtTime(vol, actx.currentTime, 0.04);
+      // 滤波变化更大一些（更“贴近耳边”的质感变化）
+      whisper.filter.frequency.value = 360 + amp * 1900;
+      whisper.filter.Q.value = 0.8 + amp * 2.2;
     
-      // 节奏：近处更急促
-      whisper.lfo.frequency.value = 0.28 + lv * 0.55;
+      // 音量上限略提高，但仍可控
+      whisper.gain.gain.setTargetAtTime(amp * 0.34, actx.currentTime, 0.05);
     }
 
     function safePlay(aud, volume=1.0) {
@@ -512,6 +511,8 @@
       renderer.toneMappingExposure = 1.6;   // 1.15~1.6 之间可以自己调
       renderer.outputColorSpace = THREE.SRGBColorSpace;
       renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.45; 
       renderer.setSize(window.innerWidth, window.innerHeight);
       renderer.shadowMap.enabled = true;
       document.body.appendChild(renderer.domElement);
@@ -526,7 +527,7 @@
 
       // Lighting: dim ambient + cold moon + player flashlight
       // Lighting: brighter ambient + cold moon + soft hemisphere + player flashlight
-      const ambient = new THREE.AmbientLight(0x9aa0aa, 0.32); // 原来 0.15
+      const ambient = new THREE.AmbientLight(0x9aa0aa, 0.37); // 原来 0.15
       scene.add(ambient);
       world.ambient = ambient;
 
@@ -779,7 +780,8 @@
         safePlay(audio.deathBgm, 0.7);
       }
       setWhisperLevel(0.0);
-
+      setWhisperLevel(0.0);
+      stopWhisper();
       if (endTitle) endTitle.textContent = title;
       deathReason.textContent = reasonText || "雾散了一瞬，沼泽把你吞没。";
 
@@ -837,6 +839,7 @@
         // We implement a soft ending: whispers stop and fog thins.
         world.fog.density = 0.03;
         setWhisperLevel(0.0);
+        stopWhisper();
 
         setTimeout(() => {
           if (!running) return;
@@ -976,8 +979,21 @@
       // aggression driven by "whisper level"
       const sanityFactor = 1 - (sanity / 100);
       const lightFactor = player.flashlightOn ? 1 : 0;
-      const whisperLevel = Math.max(0, Math.min(1, 0.12 + sanityFactor*0.75 + lightFactor*0.25));
-
+      
+      // 距离因子：dist<=2m 时接近 1；dist>=18m 时接近 0
+      // 用指数曲线让“远小近大”更明显
+      const toPlayer0 = new THREE.Vector3().subVectors(player.pos, enemy.pos);
+      const dist0 = toPlayer0.length();
+      let proximity = 1 - (dist0 / 18);
+      proximity = Math.max(0, Math.min(1, proximity));
+      proximity = Math.pow(proximity, 1.9); // 越大越“近”，曲线越陡
+      
+      // 基础强度（理智+手电） + 距离加权
+      const baseWhisper = Math.max(0, Math.min(1, 0.10 + sanityFactor * 0.65 + lightFactor * 0.25));
+      
+      // 让距离对最终音量更“主导”，近处明显变大，远处明显变小
+      const whisperLevel = Math.max(0, Math.min(1, baseWhisper * (0.25 + 0.75 * proximity) + 0.35 * proximity));
+      
       setWhisperLevel(whisperLevel);
 
       // slow "teleport creep" when whispers are high and player isn't looking
