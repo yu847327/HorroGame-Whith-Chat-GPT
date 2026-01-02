@@ -575,15 +575,15 @@
         emissiveIntensity: 0.45
       });
       
-      const glow = new THREE.PointLight(0x88ccff, 0.35, 2.2);
-      glow.position.set(0, 0.25, 0);
-      seal.add(glow);
-      
       const ground = new THREE.Mesh(geo, mat);
       ground.receiveShadow = true;
       scene.add(ground);
       world.swamp = ground;
 
+      const glow = new THREE.PointLight(0x88ccff, 0.35, 2.2);
+      glow.position.set(0, 0.25, 0);
+      ground.add(glow);
+      
       // Props: dead trees / stakes (simple cylinders)
       spawnProps();
 
@@ -780,8 +780,8 @@
         safePlay(audio.deathBgm, 0.7);
       }
       setWhisperLevel(0.0);
-      setWhisperLevel(0.0);
       stopWhisper();
+      
       if (endTitle) endTitle.textContent = title;
       deathReason.textContent = reasonText || "雾散了一瞬，沼泽把你吞没。";
 
@@ -1110,6 +1110,7 @@
       safeStop(audio.deathBgm);
       if (audio.completeTask) safeStop(audio.completeTask);
       setWhisperLevel(0.0);
+      stopWhisper();
 
       // 显示标题页
       titleScreen.style.display = "grid";
