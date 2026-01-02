@@ -1,6 +1,10 @@
 # AI 生成的 HTML 恐怖小游戏
 
 一个由 AI 生成并可继续迭代的 HTML 恐怖游戏项目。此仓库旨在提供最小化的起点，便于快速搭建、预览和扩展你的网页恐怖游戏体验。
+**如何开始**
+
+1. 网页链接https://yu847327.github.io/HorroGame-With-Chat-GPT即点即玩
+2. download 分支v1.0的所有文件，或者尝试在console中进入v1.0文件根目录，运行python serve.py，然后在浏览器打开http://127.0.0.1:8000/index.html游玩
 
 ## 项目特点
 
