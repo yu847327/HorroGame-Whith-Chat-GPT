@@ -4,7 +4,7 @@
 **如何开始**
 
 1. 网页链接https://yu847327.github.io/HorroGame-With-Chat-GPT 即点即玩
-2. download 分支v1.0的所有文件，或者尝试在console中进入v1.0文件根目录，运行python serve.py，然后在浏览器打开http://127.0.0.1:8000/index.html游玩
+2. 进入版本分支，下载到本地后，运行`python serve.py`，然后浏览器打开`http://127.0.0.1:8000/index.html`
 
 ## 项目特点
 
