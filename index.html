@@ -835,7 +835,7 @@
         fl.target.position.copy(player.pos).add(dir.multiplyScalar(3));
         fl.intensity = player.flashlightOn ? 9.5 : 0.0;
         fl.visible = player.flashlightOn;
-      
+        }
         if (fill) {
           // 点光源放在玩家稍前一点，避免“头顶一盏灯”不真实
           fill.position.copy(player.pos).add(dir.multiplyScalar(0.6));
