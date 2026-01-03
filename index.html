@@ -289,6 +289,7 @@
     const ASSETS = {
       beginBgm: "./assets/BeginPageBGM.mp3",
       menuClick: "./assets/MenuSelectionClick.wav",
+      whisperWav: "./assets/whisperSound.WAV",
       gameBgm: "./assets/GamingBGM.mp3",
       deathBgm: "./assets/DeathBGM.ogg",
       lightClick: "./assets/LightSwitchClickOn.wav",
@@ -324,6 +325,7 @@
       gameBgm: new Audio(ASSETS.gameBgm),
       deathBgm: new Audio(ASSETS.deathBgm),
       lightClick: new Audio(ASSETS.lightClick),
+      whisper: new Audio(ASSETS.whisperWav),
       completeTask: new Audio(ASSETS.completeTask),
     };
 
@@ -335,6 +337,8 @@
 
     audio.beginBgm.loop = true;
     audio.gameBgm.loop = true;
+    audio.whisper.loop = true;
+    audio.whisper.preload = "auto";
     audio.menuClick.preload = "auto";
     audio.lightClick.preload = "auto";
     audio.deathBgm.preload = "auto";
@@ -350,70 +354,16 @@
       running: false,
     };
 
-    function ensureAudioContext() {
-      if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
-      if (actx.state === "suspended") actx.resume().catch(()=>{});
-    }
-
-    function startWhisper() {
-      ensureAudioContext();
-      if (whisper.running) return;
-
-      const bufferSize = actx.sampleRate * 2;
-      const buffer = actx.createBuffer(1, bufferSize, actx.sampleRate);
-      const data = buffer.getChannelData(0);
-      for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * 0.55;
-
-      const noise = actx.createBufferSource();
-      noise.buffer = buffer;
-      noise.loop = true;
-
-      const filter = actx.createBiquadFilter();
-      filter.type = "bandpass";
-      filter.frequency.value = 800;
-      filter.Q.value = 0.9;
-
-      const gain = actx.createGain();
-      gain.gain.value = 0.0;
-
-      const lfo = actx.createOscillator();
-      lfo.type = "sine";
-      lfo.frequency.value = 0.35;
-
-      const lfoGain = actx.createGain();
-      lfoGain.gain.value = 0.12;
-
-      lfo.connect(lfoGain);
-      lfoGain.connect(gain.gain);
-
-      noise.connect(filter);
-      filter.connect(gain);
-      gain.connect(actx.destination);
-
-      noise.start();
-      lfo.start();
-
-      whisper.node = noise;
-      whisper.gain = gain;
-      whisper.filter = filter;
-      whisper.lfo = lfo;
-      whisper.lfoGain = lfoGain;
-      whisper.running = true;
-    }
-
     function setWhisperLevel(level01) {
-      if (!whisper.running) return;
+      if (!whisperRunning) return;
       const lv = Math.max(0, Math.min(1, level01));
-      whisper.filter.frequency.value = 520 + lv * 900;
-      whisper.gain.gain.setTargetAtTime(lv * 0.24, actx.currentTime, 0.05);
+      const shaped = lv * lv;
+      audio.whisper.volume = shaped * 0.85;
     }
 
     function stopWhisper() {
-      if (!whisper.running) return;
-      try { whisper.gain.gain.setTargetAtTime(0, actx.currentTime, 0.02); } catch {}
-      try { whisper.node.stop(); } catch {}
-      try { whisper.lfo.stop(); } catch {}
-      whisper.running = false;
+      whisperRunning = false;
+      try { audio.whisper.pause(); audio.whisper.currentTime = 0; } catch {}
     }
 
     function safePlay(aud, volume=1.0) {
@@ -716,7 +666,7 @@
       crosshair.style.display = "block";
 
       safeStop(audio.beginBgm);
-      safePlay(audio.gameBgm, 0.55);
+      safePlay(audio.gameBgm, 0.35);
 
       startWhisper();
       setWhisperLevel(0.05);
@@ -1057,7 +1007,6 @@
     });
 
     startBtn.addEventListener("click", async () => {
-      ensureAudioContext();
       try { await actx.resume(); } catch {}
       safePlay(audio.menuClick, 0.9);
 
@@ -1085,7 +1034,6 @@
     });
 
     window.addEventListener("pointerdown", () => {
-      ensureAudioContext();
       if (titleScreen.style.display !== "none") safePlay(audio.beginBgm, 0.55);
     }, { once: true });
 
