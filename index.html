@@ -173,7 +173,15 @@
       font-size: 14px;
     }
     #retryBtn:hover { background: rgba(255,255,255,0.14); }
-
+    
+    #flashOverlay{
+      position: fixed; inset: 0;
+      background: rgba(255,255,255,0.06);
+      mix-blend-mode: screen;
+      display: none;
+      z-index: 4;
+      pointer-events: none;
+    }
     /* watermark */
     #wm {
       position: fixed; right: 10px; bottom: 10px;
@@ -490,15 +498,19 @@
       scene.add(moon);
       world.moon = moon;
 
-      const flashlight = new THREE.SpotLight(0xffffff, 4.2, 26, Math.PI / 6, 0.35, 1.0);
+      const flashlight = new THREE.SpotLight(0xffffff, 9.5, 26, Math.PI / 5, 0.25, 1.2);
       flashlight.visible = false;
       flashlight.castShadow = true;
       flashlight.shadow.mapSize.width = 1024;
       flashlight.shadow.mapSize.height = 1024;
-      flashlight.decay = 1.6;
-      flashlight.distance = 26;
+      flashlight.decay = 1.15;
+      flashlight.distance = 45;
       scene.add(flashlight);
       scene.add(flashlight.target);
+      const flashlightFill = new THREE.PointLight(0xffffff, 0.9, 10, 2.0);
+      flashlightFill.visible = false;
+      scene.add(flashlightFill);
+      world.flashlightFill = flashlightFill;
       world.flashlight = flashlight;
 
       const size = 120;
@@ -527,7 +539,7 @@
       spawnSigils();
 
       const eGeo = new THREE.CapsuleGeometry(0.45, 1.15, 4, 10);
-      const eMat = new THREE.MeshStandardMaterial({ color: 0x050607, roughness: 0.9, metalness: 0.0 });
+      const eMat = new THREE.MeshStandardMaterial({ color: 0x1f6f4a, roughness: 0.85, metalness: 0.0, emissive: 0x0f3d2a, emissiveIntensity: 0.6 });
       const eMesh = new THREE.Mesh(eGeo, eMat);
       eMesh.castShadow = true;
       eMesh.position.copy(enemy.pos);
@@ -586,7 +598,6 @@
       ];
 
       const tabletGeo = new THREE.BoxGeometry(0.55, 0.75, 0.12);
-      // 稍微更亮一点（你提过“太暗看不清”）
       const tabletMat = new THREE.MeshStandardMaterial({
         color: 0x232a33,
         roughness: 0.55,
@@ -721,6 +732,9 @@
       sigilTxt.textContent = `${sigils} / 3`;
       flashTxt.textContent = player.flashlightOn ? "开启" : "关闭";
     }
+    
+    const flashOverlay = document.getElementById("flashOverlay");
+
 
     /* ---------------------------
       Flashlight
@@ -728,7 +742,12 @@
     function toggleFlashlight() {
       player.flashlightOn = !player.flashlightOn;
       safePlay(audio.lightClick, 0.85);
+    
       world.flashlight.visible = player.flashlightOn;
+      if (world.flashlightFill) world.flashlightFill.visible = player.flashlightOn;
+    
+      if (flashOverlay) flashOverlay.style.display = player.flashlightOn ? "block" : "none";
+    
       updateHUD();
     }
 
@@ -809,13 +828,20 @@
       camera.rotation.x = player.pitch;
 
       const fl = world.flashlight;
+      const fill = world.flashlightFill;
       if (fl) {
         fl.position.copy(player.pos);
         const dir = new THREE.Vector3(0,0,-1).applyEuler(camera.rotation);
         fl.target.position.copy(player.pos).add(dir.multiplyScalar(3));
-        fl.intensity = player.flashlightOn ? 1.8 : 0.0;
+        fl.intensity = player.flashlightOn ? 9.5 : 0.0;
         fl.visible = player.flashlightOn;
-      }
+      
+        if (fill) {
+          // 点光源放在玩家稍前一点，避免“头顶一盏灯”不真实
+          fill.position.copy(player.pos).add(dir.multiplyScalar(0.6));
+          fill.intensity = player.flashlightOn ? 0.9 : 0.0;
+          fill.visible = player.flashlightOn;
+        }
 
       let drain = 0.9;
       drain += player.flashlightOn ? 1.2 : 0.0;
