@@ -660,17 +660,6 @@ function stopWhisper() {
     whisperVolCurrent += (target - whisperVolCurrent) * 0.08;
     audio.whisper.volume = whisperVolCurrent;
   }
-
-  
-    
-  function stopWhisper() {
-    whisperRunning = false;
-    try {
-      audio.whisper.pause();
-      audio.whisper.currentTime = 0;
-    } catch {}
-  }
-
     
     /* ---------------------------
       Title -> Game start
