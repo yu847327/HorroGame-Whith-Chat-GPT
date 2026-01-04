@@ -362,18 +362,6 @@
       running: false,
     };
 
-    function setWhisperLevel(level01) {
-      if (!whisperRunning) return;
-      const lv = Math.max(0, Math.min(1, level01));
-      const shaped = lv * lv;
-      audio.whisper.volume = shaped * 0.85;
-    }
-
-    function stopWhisper() {
-      whisperRunning = false;
-      try { audio.whisper.pause(); audio.whisper.currentTime = 0; } catch {}
-    }
-
     function safePlay(aud, volume=1.0) {
       if (!aud) return;
       aud.volume = Math.max(0, Math.min(1, volume));
@@ -640,6 +628,43 @@
       }
     }
 
+    // ---------- Whisper (file-based) ----------
+let whisperRunning = false;
+
+function startWhisper() {
+  whisperRunning = true;
+
+  // 初始很小，后续用 setWhisperLevel 推上去
+  audio.whisper.volume = 0.0;
+
+  // 可选：从头开始，保证每次一致
+  try { audio.whisper.currentTime = 0; } catch {}
+
+  const p = audio.whisper.play();
+  if (p && typeof p.catch === "function") p.catch(()=>{});
+}
+
+  function setWhisperLevel(level01) {
+    if (!whisperRunning) return;
+  
+    const lv = Math.max(0, Math.min(1, level01));
+  
+    // 让“近大远小”更明显：平方曲线
+    const shaped = lv * lv;
+  
+    // 上限别太满，避免刺耳；你可调到 1.0
+    audio.whisper.volume = shaped * 0.85;
+  }
+  
+  function stopWhisper() {
+    whisperRunning = false;
+    try {
+      audio.whisper.pause();
+      audio.whisper.currentTime = 0;
+    } catch {}
+  }
+
+    
     /* ---------------------------
       Title -> Game start
     --------------------------- */
