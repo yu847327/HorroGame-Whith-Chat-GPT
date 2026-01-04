@@ -646,14 +646,13 @@ function startWhisper() {
 
   function setWhisperLevel(level01) {
     if (!whisperRunning) return;
-  
     const lv = Math.max(0, Math.min(1, level01));
-  
-    // 让“近大远小”更明显：平方曲线
     const shaped = lv * lv;
   
-    // 上限别太满，避免刺耳；你可调到 1.0
-    audio.whisper.volume = shaped * 0.85;
+    const floor = 0.02;              // 永远有一点点底噪
+    const maxExtra = 0.70;           // 随距离变化的增量
+    audio.whisper.volume = Math.min(1, floor + shaped * maxExtra);
+    console.log("whisper play attempt", audio.whisper.src); //排错行
   }
   
   function stopWhisper() {
@@ -705,7 +704,7 @@ function startWhisper() {
       safePlay(audio.gameBgm, 0.35);
 
       startWhisper();
-      setWhisperLevel(0.05);
+      setWhisperLevel(0.30);
 
       running = true;
       lockPointer();
@@ -942,7 +941,7 @@ function startWhisper() {
 
       whisperLevel = clamp01(whisperLevel);
 
-      if (!whisper.running && running) startWhisper();
+      if (!whisperRunning.running && running) startWhisper();
       setWhisperLevel(whisperLevel);
 
       // 手电照到正前方可稍微压制
@@ -1063,7 +1062,9 @@ function startWhisper() {
       safePlay(audio.menuClick, 0.9);
 
       setTimeout(() => {
-        try { startGame(); } catch (e) {
+        try {
+          startGame();  // 同步执行，保证 whisper.play() 在用户手势链路内
+        } catch (e) {
           console.error("[GAME] startGame error:", e);
           alert("startGame 报错了：请打开 F12 -> Console 看错误信息");
         }
