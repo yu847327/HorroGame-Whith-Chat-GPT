@@ -820,6 +820,7 @@ function startWhisper() {
       Movement + look
     --------------------------- */
     function updatePlayer(dt) {
+      const dir = new THREE.Vector3(0, 0, -1).applyEuler(camera.rotation).normalize();
       const forward = new THREE.Vector3();
       camera.getWorldDirection(forward);
       forward.y = 0;
@@ -856,14 +857,14 @@ function startWhisper() {
       const fill = world.flashlightFill;
       if (fl) {
         fl.position.copy(player.pos);
-        const dir = new THREE.Vector3(0,0,-1).applyEuler(camera.rotation);
-        fl.target.position.copy(player.pos).add(dir.multiplyScalar(3));
+        
+        fl.target.position.copy(player.pos).add(dir.clone().multiplyScalar(3));
         fl.intensity = player.flashlightOn ? 9.5 : 0.0;
         fl.visible = player.flashlightOn;
         }
         if (fill) {
           // 点光源放在玩家稍前一点，避免“头顶一盏灯”不真实
-          fill.position.copy(player.pos).add(dir.multiplyScalar(0.6));
+          fill.position.copy(player.pos).add(dir.clone().multiplyScalar(0.6));
           fill.intensity = player.flashlightOn ? 0.9 : 0.0;
           fill.visible = player.flashlightOn;
         }
