@@ -952,7 +952,7 @@ function stopWhisper() {
       let speed = enemy.speed * (0.75 + whisperLevel * 1.15);
       if (inCone) speed *= 0.55;
 
-      const chase = (dist < 16) || (whisperLevel > 0.55);
+      const chase = (dist < 28) || (whisperLevel > 0.45);
 
       if (chase) {
         toPlayer.normalize();
